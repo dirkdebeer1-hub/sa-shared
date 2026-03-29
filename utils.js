@@ -1,4 +1,4 @@
-/* SA Accountants Shared Utils v1.0.0
+/* SA Accountants Shared Utils v1.1.0
    Master copy — edit ONLY in this repo (dirkdebeer1-hub/sa-shared)
    Loaded by: Payroll, Tax, Company Sec, Home Dashboard modules
    DO NOT edit copies in individual module repos — they will be deleted */
@@ -33,5 +33,5 @@ function apiFetch(params) {
   });
 }
 
-/* ── End SA Shared Utils v1.0.0 ── */
-window._SA_SHARED_UTILS_VERSION = '1.0.0';
+/* ── End SA Shared Utils v1.1.0 ── */
+window._SA_SHARED_UTILS_VERSION = '1.1.0';
