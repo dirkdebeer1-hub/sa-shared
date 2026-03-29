@@ -1,8 +1,11 @@
-/* SA Accountants Shared Utils v1.3.2
+/* SA Accountants Shared Utils v1.3.3
    Master copy — edit ONLY in this repo (dirkdebeer1-hub/sa-shared)
    Loaded by: Payroll, Tax, Company Sec, Home Dashboard modules
    DO NOT edit copies in individual module repos — they will be deleted */
 'use strict';
+
+var SA_DASHBOARD_URL = 'https://sa-home-dashboard.vercel.app';
+var IS_DASHBOARD = (window.location.hostname === 'sa-home-dashboard.vercel.app');
 
 /* ── Supabase JS client (loaded from CDN) ──
    Each module's index.html must load this BEFORE sa-shared/utils.js:
@@ -31,7 +34,7 @@ async function signIn(email, password) {
 
 async function signOut() {
   await _supabaseClient.auth.signOut();
-  window.location.href = '/';
+  window.location.href = SA_DASHBOARD_URL;
 }
 
 async function getSession() {
@@ -43,19 +46,52 @@ async function requireAuth() {
   try {
     if (!_supabaseClient) {
       console.error('[SA Platform] requireAuth: _supabaseClient is null');
-      showLoginScreen();
+      if (IS_DASHBOARD) { showLoginScreen(); return false; }
+      window.location.href = SA_DASHBOARD_URL + '?redirect=' + encodeURIComponent(window.location.href);
       return false;
     }
+
+    /* Step 1: Check URL for token handoff (sat/srt params from dashboard) */
+    var params = new URLSearchParams(window.location.search);
+    var sat = params.get('sat');
+    var srt = params.get('srt');
+    if (sat && srt) {
+      try {
+        await _supabaseClient.auth.setSession({
+          access_token: sat,
+          refresh_token: srt
+        });
+        console.info('[SA Platform] Session established via token handoff');
+        /* Strip tokens from URL */
+        params.delete('sat');
+        params.delete('srt');
+        var cleanUrl = window.location.pathname;
+        var remaining = params.toString();
+        if (remaining) cleanUrl += '?' + remaining;
+        window.history.replaceState({}, '', cleanUrl);
+        return true;
+      } catch(e) {
+        console.warn('[SA Platform] Token handoff failed:', e);
+      }
+    }
+
+    /* Step 2: Check existing local session */
     var session = await getSession();
     console.info('[SA Platform] Session:', session ? 'valid (user: ' + session.user.email + ')' : 'none');
-    if (!session) {
+    if (session) return true;
+
+    /* Step 3: No session — if dashboard, show login. Otherwise redirect to dashboard. */
+    if (IS_DASHBOARD) {
       showLoginScreen();
       return false;
     }
-    return true;
+    window.location.href = SA_DASHBOARD_URL + '?redirect=' + encodeURIComponent(window.location.href);
+    return false;
+
   } catch(err) {
     console.error('[SA Platform] requireAuth error:', err);
-    showLoginScreen();
+    if (IS_DASHBOARD) { showLoginScreen(); return false; }
+    window.location.href = SA_DASHBOARD_URL + '?redirect=' + encodeURIComponent(window.location.href);
     return false;
   }
 }
@@ -226,8 +262,19 @@ async function handleLogin() {
   errDiv.style.display = 'none';
 
   try {
-    await signIn(email, password);
-    /* Reload page — DOMContentLoaded will now find a valid session */
+    var data = await signIn(email, password);
+    /* Check if there's a redirect target (another module sent us here) */
+    var params = new URLSearchParams(window.location.search);
+    var redirect = params.get('redirect');
+    if (redirect && data.session) {
+      /* Pass tokens to target module */
+      var sep = redirect.indexOf('?') >= 0 ? '&' : '?';
+      window.location.href = redirect + sep +
+        'sat=' + encodeURIComponent(data.session.access_token) +
+        '&srt=' + encodeURIComponent(data.session.refresh_token);
+      return;
+    }
+    /* No redirect — just reload (dashboard stays on dashboard) */
     window.location.reload();
   } catch(err) {
     errDiv.textContent = 'Incorrect email or password. Please try again.';
@@ -237,5 +284,5 @@ async function handleLogin() {
   }
 }
 
-/* ── End SA Shared Utils v1.3.2 ── */
-window._SA_SHARED_UTILS_VERSION = '1.3.2';
+/* ── End SA Shared Utils v1.3.3 ── */
+window._SA_SHARED_UTILS_VERSION = '1.3.3';
