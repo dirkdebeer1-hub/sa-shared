@@ -1,4 +1,4 @@
-/* SA Accountants Shared Utils v1.3.1
+/* SA Accountants Shared Utils v1.3.2
    Master copy — edit ONLY in this repo (dirkdebeer1-hub/sa-shared)
    Loaded by: Payroll, Tax, Company Sec, Home Dashboard modules
    DO NOT edit copies in individual module repos — they will be deleted */
@@ -58,6 +58,18 @@ async function requireAuth() {
     showLoginScreen();
     return false;
   }
+}
+
+/* ── Supabase REST fetch — always uses JWT session token ── */
+async function sbFetch(url, options) {
+  var session = await getSession();
+  var token = session ? session.access_token : SUPABASE_KEY;
+  var headers = Object.assign({
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + token,
+    'Content-Type': 'application/json'
+  }, (options && options.headers) || {});
+  return fetch(url, Object.assign({}, options, { headers: headers }));
 }
 
 /* ── Updated apiFetch — uses JWT not APP_SECRET ── */
@@ -225,5 +237,5 @@ async function handleLogin() {
   }
 }
 
-/* ── End SA Shared Utils v1.3.1 ── */
-window._SA_SHARED_UTILS_VERSION = '1.3.1';
+/* ── End SA Shared Utils v1.3.2 ── */
+window._SA_SHARED_UTILS_VERSION = '1.3.2';
