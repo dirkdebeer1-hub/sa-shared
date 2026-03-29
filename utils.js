@@ -1,4 +1,4 @@
-/* SA Accountants Shared Utils v1.3.0
+/* SA Accountants Shared Utils v1.3.1
    Master copy — edit ONLY in this repo (dirkdebeer1-hub/sa-shared)
    Loaded by: Payroll, Tax, Company Sec, Home Dashboard modules
    DO NOT edit copies in individual module repos — they will be deleted */
@@ -40,12 +40,24 @@ async function getSession() {
 }
 
 async function requireAuth() {
-  var session = await getSession();
-  if (!session) {
+  try {
+    if (!_supabaseClient) {
+      console.error('[SA Platform] requireAuth: _supabaseClient is null');
+      showLoginScreen();
+      return false;
+    }
+    var session = await getSession();
+    console.info('[SA Platform] Session:', session ? 'valid (user: ' + session.user.email + ')' : 'none');
+    if (!session) {
+      showLoginScreen();
+      return false;
+    }
+    return true;
+  } catch(err) {
+    console.error('[SA Platform] requireAuth error:', err);
     showLoginScreen();
     return false;
   }
-  return true;
 }
 
 /* ── Updated apiFetch — uses JWT not APP_SECRET ── */
@@ -213,5 +225,5 @@ async function handleLogin() {
   }
 }
 
-/* ── End SA Shared Utils v1.3.0 ── */
-window._SA_SHARED_UTILS_VERSION = '1.3.0';
+/* ── End SA Shared Utils v1.3.1 ── */
+window._SA_SHARED_UTILS_VERSION = '1.3.1';
